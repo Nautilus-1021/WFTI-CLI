@@ -1,6 +1,6 @@
 from cmd import Cmd
-import os, json, sys, requests
-import urllib.request
+import os, json, sys, requests, urllib.request
+from urllib.error import HTTPError
 from requests_toolbelt.multipart.encoder import MultipartEncoder
 
 class WFTI_SHELL(Cmd):
@@ -8,8 +8,12 @@ class WFTI_SHELL(Cmd):
     server = "127.0.0.1:5000"
 
     def do_config(self, arg):
+        """Configure l'interface:
+config url <url>: Permet de modifier l'adresse du serveur cible (par défaut: 127.0.0.1:5000)"""
         args = parse(arg)
-        if args[0] == "url":
+        if not args:
+            print(self.do_config.__doc__)
+        elif args[0] == "url":
             self.server = args[1]
 
     def do_list(self, arg):
@@ -41,6 +45,7 @@ class WFTI_SHELL(Cmd):
             print(filename)
         
     def do_exit(self, arg):
+        """Quitte l'interface de ligne de commande"""
         sys.exit()
 
     def do_upload(self, arg):
@@ -52,7 +57,15 @@ class WFTI_SHELL(Cmd):
         response = requests.post("http://" + self.server + "/upload/", data=mp_encoder, headers={'Content-Type':mp_encoder.content_type})
         print(response.status_code)
 
-def parse(arg):
+    def do_delete(self, arg):
+        try:
+            with urllib.request.urlopen("http://" + self.server + "/cli/delete/" + arg) as f:
+                for filename in json.load(f):
+                    print(filename)
+        except HTTPError:
+            print("Fichier non trouvé")
+
+def parse(arg:str) -> tuple:
     'Convert a series of zero or more numbers to an argument tuple'
     return tuple(arg.split())
 
